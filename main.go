@@ -25,7 +25,8 @@ func main() {
 	var count int
 
 	app := &cli.App{
-		Name: "DepLog",
+		Name:    "deplog",
+		Version: "v0.1.1",
 		Authors: []*cli.Author{
 			{
 				Name:  "Paweł Cyman",
