@@ -21,12 +21,12 @@ jobs:
           go-version: 1.17
 
       - name: Build linux binary
-        run: go build -o build/deplog
+        run: go build -o build_linux/deplog
 
       - name: Zip linux binary
         uses: thedoctor0/zip-release@master
         with:
-          path: build/deplog
+          directory: build_linux/
           type: 'zip'
           filename: 'deplog-linux64.zip'
 
