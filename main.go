@@ -45,7 +45,6 @@ func main() {
 				Name:        "container",
 				Aliases:     []string{"c"},
 				Usage:       "specify which container",
-				Required:    true,
 				Destination: &container,
 			},
 			&cli.IntFlag{
@@ -58,11 +57,14 @@ func main() {
 		Usage: "dep your logs",
 		Action: func(c *cli.Context) error {
 			countSet := c.IsSet("count")
+			containerSet := c.IsSet("container")
+
 			deployment := c.Args().Get(0)
 			if deployment == "" {
 				log.Fatal("Provide a deployment")
 			}
-			getLogs(deployment, container, follow, int64(count), countSet)
+
+			getLogs(deployment, container, containerSet, follow, int64(count), countSet)
 			return nil
 		},
 	}
@@ -76,6 +78,7 @@ func main() {
 func getLogs(
 	deployment string,
 	container string,
+	containerSet bool,
 	follow bool,
 	count int64,
 	countSet bool,
@@ -96,7 +99,17 @@ func getLogs(
 			continue
 		}
 		wg.Add(1)
-		go getPodLogs(wg, *client, currentNamespace, pod.GetName(), container, follow, count, countSet)
+		go getPodLogs(
+			wg,
+			*client,
+			currentNamespace,
+			pod.GetName(),
+			container,
+			containerSet,
+			follow,
+			count,
+			countSet,
+		)
 	}
 
 	wg.Wait()
@@ -108,23 +121,22 @@ func getPodLogs(
 	namespace string,
 	podName string,
 	containerName string,
+	containerSet bool,
 	follow bool,
 	count int64,
 	countSet bool,
 ) {
-	podLogOptions := v1.PodLogOptions{
-		Container: containerName,
-		Follow:    follow,
-	}
-	if countSet {
-		podLogOptions.TailLines = &count
-	}
+	podLogOptions := getPodLogOptions(follow, count, countSet, containerName, containerSet)
 	podLogRequest := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &podLogOptions)
 	stream, err := podLogRequest.Stream(context.TODO())
+
 	if err != nil {
 		fmt.Println(err)
+		wg.Done()
+		return
+	} else {
+		defer stream.Close()
 	}
-	defer stream.Close()
 
 	colorReset := "\033[0m"
 	colorBlue := "\033[34m"
@@ -186,4 +198,24 @@ func getPodList(client *kubernetes.Clientset, currentNamespace string) *v1.PodLi
 	}
 
 	return pods
+}
+
+func getPodLogOptions(
+	follow bool,
+	count int64,
+	countSet bool,
+	containerName string,
+	containerSet bool,
+) v1.PodLogOptions {
+	podLogOptions := v1.PodLogOptions{
+		Follow: follow,
+	}
+	if countSet {
+		podLogOptions.TailLines = &count
+	}
+	if containerSet {
+		podLogOptions.Container = containerName
+	}
+
+	return podLogOptions
 }
