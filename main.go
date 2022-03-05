@@ -50,18 +50,18 @@ func main() {
 			&cli.IntFlag{
 				Name:        "count",
 				Aliases:     []string{"n"},
-				Value:       500,
 				Usage:       "how many logs per pod to query",
 				Destination: &count,
 			},
 		},
 		Usage: "dep your logs",
 		Action: func(c *cli.Context) error {
+			countSet := c.IsSet("count")
 			deployment := c.Args().Get(0)
 			if deployment == "" {
 				log.Fatal("Provide a deployment")
 			}
-			getLogs(deployment, container, follow, int64(count))
+			getLogs(deployment, container, follow, int64(count), countSet)
 			return nil
 		},
 	}
@@ -77,6 +77,7 @@ func getLogs(
 	container string,
 	follow bool,
 	count int64,
+	countSet bool,
 ) {
 	client := getClientSet()
 	currentNamespace := getCurrentNamespace()
@@ -94,7 +95,7 @@ func getLogs(
 			continue
 		}
 		wg.Add(1)
-		go getPodLogs(wg, *client, currentNamespace, pod.GetName(), container, follow, count)
+		go getPodLogs(wg, *client, currentNamespace, pod.GetName(), container, follow, count, countSet)
 	}
 
 	wg.Wait()
@@ -108,11 +109,14 @@ func getPodLogs(
 	containerName string,
 	follow bool,
 	count int64,
+	countSet bool,
 ) {
 	podLogOptions := v1.PodLogOptions{
 		Container: containerName,
 		Follow:    follow,
-		TailLines: &count,
+	}
+	if countSet {
+		podLogOptions.TailLines = &count
 	}
 	podLogRequest := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &podLogOptions)
 	stream, err := podLogRequest.Stream(context.TODO())
