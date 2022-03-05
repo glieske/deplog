@@ -35,4 +35,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            deplog-linux64.zip
+            build_linux/deplog-linux64.zip
