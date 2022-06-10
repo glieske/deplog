@@ -18,10 +18,13 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Build linux binary
         run: go build -o build_linux/deplog
+
+      - name: Build apple m1 binary
+        run: GOOS=darwin GOARCH=arm64 go build -o build_darwin_arm/deplog
 
       - name: Zip linux binary
         uses: thedoctor0/zip-release@master
@@ -29,6 +32,13 @@ jobs:
           directory: build_linux/
           type: 'zip'
           filename: 'deplog-linux64.zip'
+      
+      - name: Zip apple m1 binary
+        uses: thedoctor0/zip-release@master
+        with:
+          directory: build_darwin_arm/
+          type: 'zip'
+          filename: 'deplog-darwin-arm.zip'
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -36,3 +46,4 @@ jobs:
         with:
           files: |
             build_linux/deplog-linux64.zip
+            build_darwin_arm/deplog-darwin-arm.zip
